@@ -76,7 +76,14 @@ report   { crate: "..." }                             → report/REPORT.md 与 c
 npm run vendor        # 取回三个平台的二进制（约 80 MB）到 vendor/，vendor/ 不进 git
 npm test              # 拉起 launcher 做 MCP 握手，断言 22 个工具
 npm run build:npm     # 装配 npm-out/ 并用 npm pack --dry-run 校验产物清单
-npm run build:npm -- --publish   # 装配后发布（需要先 npm login）
+npm run build:npm -- --publish   # 装配后发布（需要先 npm login --registry=https://registry.npmjs.org）
+```
+
+发布到 npmjs 时，账号若开了 2FA（auth-and-writes），`npm publish` 会要求一次性密码，必须在一个**交互式终端**里完成浏览器认证。CI 用 OIDC trusted publishing 就不需要这一步，所以首版手动发、之后交给 `release.yml`。
+
+```sh
+# 首版（或任何手动发布）在交互式终端里跑：
+cd npm-out && npm publish --access public
 ```
 
 CI 在 `ubuntu-latest`、`ubuntu-24.04-arm`、`windows-latest` 三个 runner 上各跑一次

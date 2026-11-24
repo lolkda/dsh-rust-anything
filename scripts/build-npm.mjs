@@ -99,6 +99,7 @@ for (const key of platforms) console.log(`  vendor/${key}/${exeFor(key)}`)
 
 if (process.argv.includes('--publish')) {
   console.log('build-npm: publishing npm-out')
-  execSync(`${npm} publish npm-out --access public`, { cwd: root, stdio: 'inherit' })
+  // Publish from inside npm-out: a bare `npm publish <folder>` gets read as a package spec.
+  execSync(`${npm} publish --access public`, { cwd: out, stdio: 'inherit' })
   console.log('build-npm: published')
 }
