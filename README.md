@@ -10,14 +10,37 @@ Rust，每一步都用原程序录制下来的行为校验。
 |---|---|
 | MCP server `rust-anything` | 22 个工具：`analyze`、`bridge`、`record`、`diff`、`gate`、`build`、`bench`、`profile`、`go`、`refresh`、`fuzz`、`shadow`、`map`、`package`、`enable`、`disable`、`report`、`app_record`、`app_replay`、`app_front_door`、`app_wire`、`app_lift` |
 | Skill `rust-anything` | 流程纪律：profile → plan → 一次一个单元 bridge → record → 写 `src/port.rs` → diff → gate → enable → report。按需加载，不常驻上下文 |
-| 内置 CLI | rust-anything 4.0.0（linux-x64）放在 `vendor/linux-x64/`，由 `bin/launcher.mjs` 启动 |
+| 内置 CLI | rust-anything 4.0.0 预编译二进制，随发布物提供 |
 
-不装全局命令、不改 `PATH`、不拉 npm 依赖：MCP 行通过 launcher 启动仓库内的二进制。
+不装全局命令、不改 `PATH`、无运行时 npm 依赖：MCP 行通过 `bin/launcher.mjs` 启动包内二进制。
+
+## 支持平台
+
+| 平台 | 状态 |
+|---|---|
+| linux-x64 | ✅ 实测跑通（22 工具 + go-fuzzy 闭环 440/440 + gate 12/12） |
+| linux-arm64 | ✅ CI 冒烟测试通过（原生 arm64 runner） |
+| win32-x64 | ✅ CI 冒烟测试通过（windows-latest） |
+| 其它（含 macOS） | ❌ 未覆盖；launcher 会回退到 `PATH` 上的 `rust-anything`，没有则带指引退出 |
+
+二进制**不进仓库**：仓库只放源码，发布时由脚本装配进 tarball。所以 clone 下来后要跑一次
+`npm run vendor` 才有二进制可用。
 
 ## 安装
 
-在 DSH 的 **Plugins** 页选「添加插件 / Add plugin」，指向本目录；或者用插件管理器按目录安装。
-安装后：
+```sh
+npm install -g @lolkda/dsh-rust-anything
+```
+
+或者从仓库安装（开发用）：
+
+```sh
+git clone https://github.com/lolkda/dsh-rust-anything
+cd dsh-rust-anything
+npm run vendor        # 取回三个平台的二进制到 vendor/
+```
+
+然后在 DSH 的 **Plugins** 页添加该包目录。安装后：
 
 - `mcp_list` 里出现 `rust-anything`；
 - 会话技能目录里出现 `rust-anything`。
@@ -47,29 +70,43 @@ build / diff / gate                                    { crate: "..." }
 report   { crate: "..." }                             → report/REPORT.md 与 card.svg
 ```
 
+## 开发
+
+```sh
+npm run vendor        # 取回三个平台的二进制（约 80 MB）到 vendor/，vendor/ 不进 git
+npm test              # 拉起 launcher 做 MCP 握手，断言 22 个工具
+npm run build:npm     # 装配 npm-out/ 并用 npm pack --dry-run 校验产物清单
+npm run build:npm -- --publish   # 装配后发布（需要先 npm login）
+```
+
+CI 在 `ubuntu-latest`、`ubuntu-24.04-arm`、`windows-latest` 三个 runner 上各跑一次
+`npm run vendor` + `npm test`；推 `v*` tag 触发 `release.yml` 发布。
+
 ## 已知限制
 
-- **仅 linux-x64**。其他平台需要把对应平台的二进制放进 `vendor/<platform>-<arch>/`；launcher
-  会回退到 `PATH` 上的 `rust-anything`，都没有就带安装指引退出。
+- **未覆盖 macOS**。需要时把对应二进制加进 `rustAnything.platforms` 并补 runner。
 - **`record`、`diff`、`gate`、`app record`、`app replay` 会真的执行原程序**。在项目副本上跑，
   用测试数据库，环境里不要放生产凭据。
 - **`enable` 会改你的源文件**（加一个带标记的块，`disable` 逐字节还原）。启用前先问过用户。
 - **它只能抓到录制覆盖到的行为**。`diff` 与 `gate` 通过的含义是「与录制的行为一致」，
   不是「任何情况下都和原程序相同」；`fuzz` 用来采样录制没覆盖的输入。
-- 没有设置页：版本与平台写在 `package.json` 的 `rustAnything.version` 里。
+- 没有设置页：版本与平台写在 `package.json` 的 `rustAnything` 字段里。
 
 ## 目录结构
 
 ```text
-package.json            bundle 清单（dsh.bundle.patch、exports、files）
+package.json            bundle 清单（dsh.bundle.patch、exports、files、rustAnything）
 cordis.patch.yml        两行：skill provider + dsh-mcp-client
 index.js                Host 插件：向 ctx.skills 注册 rust-anything skill
-bin/launcher.mjs        按平台解析内置二进制，回退 PATH，透传 stdio 与退出码
-vendor/linux-x64/       rust-anything 4.0.0 预编译二进制
+bin/launcher.mjs        按平台解析包内二进制，回退 PATH，透传 stdio 与退出码
+vendor/                 二进制（不进 git，由 npm run vendor 生成）
 skills/rust-anything/   改写版 SKILL.md 与 whole-app.md
 locale/                 en.json / zh.json（插件清单显示用）
 docs/DETAIL.md          插件详情页正文
-docs/specs/             设计与验收记录（D-001~D-010、AC-001~AC-007）
+docs/specs/             设计与验收记录（主规格 + 分发规格）
+scripts/                vendor-binaries.mjs、build-npm.mjs
+test/smoke.mjs          三平台通用的 MCP 冒烟测试
+.github/workflows/      ci.yml（三平台冒烟）、release.yml（tag 发布）
 icon.svg                插件图标
 ```
 

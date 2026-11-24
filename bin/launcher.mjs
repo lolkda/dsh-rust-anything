@@ -25,7 +25,14 @@ function finish(result) {
     console.error(`rust-anything: ${result.error.message}`)
     process.exit(1)
   }
-  if (result.signal) process.kill(process.pid, result.signal)
+  if (result.signal) {
+    // Windows has no POSIX signals: re-raising one there throws instead of exiting.
+    try {
+      process.kill(process.pid, result.signal)
+    } catch {
+      process.exit(1)
+    }
+  }
   process.exit(result.status ?? 1)
 }
 

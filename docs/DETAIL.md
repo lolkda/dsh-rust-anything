@@ -9,7 +9,7 @@ Rust one piece at a time, and prove every piece still behaves the same.
 |---|---|
 | MCP server `rust-anything` | 22 tools: `analyze`, `bridge`, `record`, `diff`, `gate`, `build`, `bench`, `profile`, `go`, `refresh`, `fuzz`, `shadow`, `map`, `package`, `enable`, `disable`, `report`, `app_record`, `app_replay`, `app_front_door`, `app_wire`, `app_lift` |
 | Skill `rust-anything` | The workflow: profile → plan → bridge one unit → record → port `src/port.rs` → diff → gate → enable → report. Loaded on demand, not kept in the prompt |
-| Bundled CLI | rust-anything 4.0.0 for linux-x64 in `vendor/linux-x64/`, started through `bin/launcher.mjs` |
+| Bundled CLI | rust-anything 4.0.0 for linux-x64, linux-arm64 and win32-x64, shipped in `vendor/<platform>-<arch>/` and started through `bin/launcher.mjs` |
 
 Nothing is installed globally and nothing is added to `PATH`: the MCP server starts the bundled
 binary through the launcher.
@@ -42,9 +42,10 @@ report       { crate: "..." }                             → report/REPORT.md a
 
 ## Limits
 
-- **linux-x64 only.** Other platforms need that platform's binary under
-  `vendor/<platform>-<arch>/`; the launcher falls back to a `rust-anything` on `PATH` and, failing
-  that, exits with instructions.
+- **Three platforms: linux-x64, linux-arm64 and win32-x64.** macOS and other platforms need that
+  platform's binary under `vendor/<platform>-<arch>/`; the launcher falls back to a `rust-anything`
+  on `PATH` and, failing that, exits with instructions. linux-x64 is the platform exercised
+  end-to-end (a full port); the other two are covered by the MCP smoke test in CI.
 - **`record`, `diff`, `gate`, `app record` and `app replay` execute the original code.** They run
   each case against your program, so use a copy of the project, a test database and no production
   credentials in the environment.

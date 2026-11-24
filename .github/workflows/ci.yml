@@ -1,0 +1,35 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    name: smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The repository has no binaries: fetch the three platforms first.
+      - name: Vendor the binaries
+        run: node scripts/vendor-binaries.mjs
+
+      - name: Check the JavaScript
+        run: |
+          node --check index.js
+          node --check bin/launcher.mjs
+          node --check scripts/build-npm.mjs
+
+      - name: MCP handshake and tool list
+        run: node test/smoke.mjs

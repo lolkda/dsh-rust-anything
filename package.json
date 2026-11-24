@@ -1,10 +1,24 @@
 {
-  "name": "@local/dsh-rust-anything",
+  "name": "@lolkda/dsh-rust-anything",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Bring rust-anything into DeepSeek Harness: rewrite an app in Rust one piece at a time, checked against the original's recorded behavior at every step.",
   "license": "MIT",
+  "author": "lolkda",
+  "homepage": "https://github.com/lolkda/dsh-rust-anything#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lolkda/dsh-rust-anything.git"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "rust-anything",
+    "rust",
+    "migration",
+    "mcp"
+  ],
   "exports": {
     ".": "./index.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
@@ -19,10 +33,18 @@
     "vendor",
     "skills",
     "locale/*.json",
-    "docs",
+    "docs/DETAIL.md",
     "icon.svg",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
     "package.json"
   ],
+  "scripts": {
+    "vendor": "node scripts/vendor-binaries.mjs",
+    "build:npm": "node scripts/build-npm.mjs",
+    "test": "node test/smoke.mjs"
+  },
   "engines": {
     "node": ">=22"
   },
@@ -33,7 +55,7 @@
   },
   "rustAnything": {
     "version": "4.0.0",
-    "platforms": ["linux-x64"],
+    "platforms": ["linux-x64", "linux-arm64", "win32-x64"],
     "source": "https://registry.npmjs.org/rust-anything/-/rust-anything-4.0.0.tgz",
     "upstream": "https://github.com/erkamyaman/rust-anything"
   }

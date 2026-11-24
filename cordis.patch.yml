@@ -1,12 +1,12 @@
 # dsh-rust-anything: rust-anything in DeepSeek Harness.
 #
-# The first row registers the bundled `rust-anything` skill; the second starts the
-# MCP server from the binary bundled in vendor/<platform>-<arch>/ through bin/launcher.mjs,
-# so no global install and no PATH entry is needed.
+# The first row registers the bundled `rust-anything` skill; the second starts the MCP server from
+# the binaries shipped in the package (vendor/<platform>-<arch>/), through bin/launcher.mjs, so no
+# global install and no PATH entry is needed.
 
 - insert:
     - id: rust-anything-skill
-      name: '@local/dsh-rust-anything'
+      name: '@lolkda/dsh-rust-anything'
 
     - id: rust-anything-mcp
       name: '@deepseek-ai/dsh-mcp-client'
@@ -15,7 +15,7 @@
         transport: stdio
         command: !!js process.execPath
         args:
-          - !!js decodeURIComponent(new URL('./node_modules/@local/dsh-rust-anything/bin/launcher.mjs', baseUrl).pathname).replace(/^\/([A-Za-z]:)/, '$1')
+          - !!js decodeURIComponent(new URL('./node_modules/@lolkda/dsh-rust-anything/bin/launcher.mjs', baseUrl).pathname).replace(/^\/([A-Za-z]:)/, '$1')
           - mcp
         failOnStartupError: true
         toolCallTimeoutMs: 900000
