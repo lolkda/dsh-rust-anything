@@ -6,7 +6,7 @@
 - 规格状态：已确认
 - 最后更新：2026-11-24
 - 实现状态：已实现
-- 验证状态：受阻（AC-012 等待用户执行 `npm login`；其余验收项全部通过）
+- 验证状态：通过（AC-008~AC-012 全部通过）
 - 关联文档：[dsh-rust-anything.md](dsh-rust-anything.md)（主规格，D-001~D-010、R-001~R-007、AC-001~AC-007）。本文档只覆盖分发与发布，不取代主规格；两者冲突时以本文档对"二进制从哪来"的改写为准。编号在本文档内继续递增，避免与主规格冲突。
 
 ## 2. 目标与范围
@@ -200,8 +200,8 @@
 - 前置条件：用户完成 `npm login`。
 - 操作或输入：`npm publish npm-out`，随后 `npm view @lolkda/dsh-rust-anything version`。
 - 预期结果：返回 `0.1.0`；从 registry 拉下的 tarball 内容与 AC-009 一致。
-- 验证状态：受阻
-- 验证证据：尚未执行——本机 `npm whoami` 返回 `need auth`，发布前需要用户本人在终端执行 `npm login`（凭据不能由模型输入）。装配产物已就绪：`npm-out/` 与 `npm-out/lolkda-dsh-rust-anything-0.1.0.tgz`。
+- 验证状态：通过
+- 验证证据：用户在交互式终端完成 `npm login --registry=https://registry.npmjs.org` 与 2FA 浏览器认证后，`npm publish --access public` 返回 `+ @lolkda/dsh-rust-anything@0.1.0`；约 4 分钟后 registry 可查（期间短暂出现 `0.0.0-stage` 占位，属 npm 后处理队列）。`npm view` 返回 `latest: 0.1.0`；`npm pack @lolkda/dsh-rust-anything@0.1.0` 拉下的 tarball 中三个平台二进制大小与上游逐字节一致（29373248 / 28249624 / 27602432），Linux 两项权限 `-rwxr-xr-x`。
 
 ## 7. 未决问题与假设
 
