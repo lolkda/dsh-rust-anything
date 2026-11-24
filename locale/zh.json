@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "rust-anything",
+    "description": "把应用一块一块重写成 Rust，每一步都用原程序录制下来的行为校验。内置 rust-anything 4.0.0 CLI、22 个 MCP 工具和一份流程 skill，无需全局安装。",
+    "detail": "docs/DETAIL.md"
+  }
+}
