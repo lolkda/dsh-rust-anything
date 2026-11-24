@@ -88,8 +88,11 @@ npm run build:npm -- --publish   # 装配后发布（需要先 npm login --regis
 cd npm-out && npm publish --access public
 ```
 
-CI 在 `ubuntu-latest`、`ubuntu-24.04-arm`、`windows-latest` 三个 runner 上各跑一次
-`npm run vendor` + `npm test`；推 `v*` tag 触发 `release.yml` 发布。
+CI 在 `ubuntu-latest`、`ubuntu-24.04-arm`、`windows-latest`、`macos-latest` 四个 runner 上各跑一次
+`npm run vendor` + `npm test`。
+
+发布走 tag：`git tag v0.1.2 && git push origin v0.1.2` 触发 `release.yml`，由 npm **trusted publishing（OIDC）**
+发布并生成 provenance（0.1.0 是唯一一次手动发布，因为 npm 要求包先存在才能配 Trusted Publisher）。
 
 ## 已知限制
 

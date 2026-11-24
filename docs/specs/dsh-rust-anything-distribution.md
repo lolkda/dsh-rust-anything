@@ -6,7 +6,7 @@
 - 规格状态：已确认
 - 最后更新：2026-11-25
 - 实现状态：已实现
-- 验证状态：通过（AC-008~AC-012 全部通过）
+- 验证状态：通过（AC-008~AC-013 全部通过）
 - 关联文档：[dsh-rust-anything.md](dsh-rust-anything.md)（主规格，D-001~D-010、R-001~R-007、AC-001~AC-007）。本文档只覆盖分发与发布，不取代主规格；两者冲突时以本文档对"二进制从哪来"的改写为准。编号在本文档内继续递增，避免与主规格冲突。
 
 ## 2. 目标与范围
@@ -193,7 +193,7 @@
 - 操作或输入：`node scripts/build-npm.mjs`，再 `npm pack npm-out --dry-run`（或 `tar tzf` 检查 tarball）。
 - 预期结果：tarball 内含五个平台的二进制（`linux-x64`、`linux-arm64`、`win32-x64`、`darwin-arm64`、`darwin-x64`），大小与上游包一致，Linux 与 macOS 的可执行位为 755。
 - 验证状态：通过
-- 验证证据：`npm run build:npm` 输出 16 个文件、17.4 MB packed；`tar tvzf` 显示三个平台文件大小分别为 29373248、28249624、27602432 字节，与上游 npm 包逐一相同，Linux 两项权限 `-rwxr-xr-x`，其余文件归一化为 `-rw-r--r--`。`build-npm` 自身用 `npm pack --dry-run --json` 校验清单，缺文件即非零退出。
+- 验证证据：0.1.1 装配输出 18 个文件、30.2 MB packed / 139.9 MB unpacked；从 registry 拉下 `@lolkda/dsh-rust-anything@0.1.1` 后 `tar tvzf` 显示五个平台文件大小与上游逐一相同（linux-x64 29373248、linux-arm64 28249624、win32-x64 27602432、darwin-arm64 27017312、darwin-x64 27593368），Linux 与 macOS 四项权限 `-rwxr-xr-x`。`build-npm` 改为遍历 staging 目录核对必需文件，并用 npm 的计数交叉校验（npm 11.22 在 CI 上对 `npm pack --dry-run --json` 返回空数组，曾导致首次发布失败，见 AC-013）。
 
 ### AC-010：三平台冒烟通过
 
@@ -202,7 +202,7 @@
 - 操作或输入：查看 `ci.yml` 三个 job 的运行结果。
 - 预期结果：ubuntu-latest、ubuntu-24.04-arm、windows-latest、macos-latest 四个 job 均成功，各自输出工具数 22；darwin-x64 无 job（D-018）。
 - 验证状态：通过
-- 验证证据：GitHub Actions run `45424355413`（commit `eb47fad`）三个 job 全部 success，日志分别为 `smoke: linux-x64 ok — rust-anything 4.0.0, 22 tools`、`smoke: linux-arm64 ok — rust-anything 4.0.0, 22 tools`、`smoke: win32-x64 ok — rust-anything 4.0.0, 22 tools`。arm64 与 Windows 的可用性由此证实，不再是假设。
+- 验证证据：GitHub Actions run `45440605219`（commit `963f177`）四个 job 全部 success：`smoke: linux-x64 ok — rust-anything 4.0.0, 22 tools`、`smoke: linux-arm64 ok`、`smoke: win32-x64 ok`、`smoke: darwin-arm64 ok — rust-anything 4.0.0, 22 tools`（macos-latest，Apple Silicon 原生）。darwin-x64 无 job，按 D-018 只做静态检查（`file`：Mach-O x86_64）。
 
 ### AC-011：本地安装复验
 
@@ -228,18 +228,19 @@
 - 前置条件：npm 上已为该包配置 Trusted Publisher（仓库 + `release.yml`）；代码含五个平台。
 - 操作或输入：`git tag v0.1.1 && git push origin v0.1.1`，观察 `release.yml`。
 - 预期结果：workflow 在装配与冒烟后由 OIDC 完成发布；`npm view @lolkda/dsh-rust-anything@0.1.1` 可查，tarball 含五个平台。
-- 验证状态：未执行
-- 验证证据：尚未执行
+- 验证状态：通过
+- 验证证据：首轮 run `45440982328` 在装配步骤失败（`npm pack --dry-run --json` 在 npm 11.22 上返回空数组）；修复后 run `45441792612` 装配与冒烟通过，publish 因 Trusted Publisher 未配置返回 `E404 PUT`；用户在 npm 配置后重跑同一 run，`Publish` 成功，日志含 `Signed provenance statement` 与 `Provenance statement published to transparency log`（logIndex 4083057860）。`npm view` 返回 `latest: 0.1.1`，`dist.attestations.provenance.predicateType` 为 SLSA v1，registry tarball 五个平台与上游逐字节一致。
 
 ## 7. 未决问题与假设
 
 ### Q-006：Trusted Publisher 配置
 
-- 类型：未决问题
+- 类型：已解决（原未决问题）
 - 内容：npmjs.com 上为 `@lolkda/dsh-rust-anything` 配置 Trusted Publisher（仓库 `lolkda/dsh-rust-anything`、workflow `release.yml`）只能由用户完成。
 - 影响范围：R-012、0.2.0 起的 CI 发布。
 - 是否阻塞：否，不阻塞 0.1.0；阻塞后续版本走 OIDC。
-- 决定或验证方式：用户配置后，用下一个版本的实际发布验证；未配置前 `release.yml` 会失败并给出提示。
+- 决定或验证方式：用户配置后，用下一个版本的实际发布验证。
+- 结论：用户已在 npm 网页完成配置（Publisher GitHub Actions、仓库 `lolkda/dsh-rust-anything`、workflow `release.yml`）；0.1.1 的 OIDC 发布成功并带 provenance，证明配置生效。
 
 ### Q-007：arm64 与 Windows 的实际可用性
 
@@ -260,11 +261,12 @@
 
 ### Q-008：首版发布时机
 
-- 类型：未决问题
+- 类型：已解决（原未决问题）
 - 内容：发布动作依赖用户在本机执行 `npm login`（凭据只能用户本人输入）。
 - 影响范围：AC-012。
 - 是否阻塞：是，阻塞 AC-012。
 - 决定或验证方式：用户完成登录后由模型执行装配与发布，并复验 registry 上的内容。
+- 结论：0.1.0 由用户在交互式终端完成 2FA 认证后手动发布（AC-012），0.1.1 起改为 OIDC（AC-013），此后不再需要手动步骤。
 
 ## 8. 技术设计
 
