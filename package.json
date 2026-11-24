@@ -55,8 +55,16 @@
   },
   "rustAnything": {
     "version": "4.0.0",
-    "platforms": ["linux-x64", "linux-arm64", "win32-x64"],
+    "platforms": [
+      "linux-x64",
+      "linux-arm64",
+      "win32-x64"
+    ],
     "source": "https://registry.npmjs.org/rust-anything/-/rust-anything-4.0.0.tgz",
     "upstream": "https://github.com/erkamyaman/rust-anything"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
   }
 }
