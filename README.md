@@ -18,10 +18,12 @@ Rust，每一步都用原程序录制下来的行为校验。
 
 | 平台 | 状态 |
 |---|---|
-| linux-x64 | ✅ 实测跑通（22 工具 + go-fuzzy 闭环 440/440 + gate 12/12） |
-| linux-arm64 | ✅ CI 冒烟测试通过（原生 arm64 runner） |
-| win32-x64 | ✅ CI 冒烟测试通过（windows-latest） |
-| 其它（含 macOS） | ❌ 未覆盖；launcher 会回退到 `PATH` 上的 `rust-anything`，没有则带指引退出 |
+| linux-x64 | ✅ 实测跑通（22 工具 + go-fuzzy 闭环 440/440 + gate 12/12）+ CI 冒烟 |
+| linux-arm64 | ✅ CI 冒烟（原生 arm64 runner） |
+| win32-x64 | ✅ CI 冒烟（windows-latest） |
+| darwin-arm64 | ✅ CI 冒烟（macos-latest，Apple Silicon） |
+| darwin-x64 | ⚠️ 随包提供，未经 CI 执行（GitHub 已无免费 Intel macOS runner）；`file` 确认为 Mach-O x86_64 |
+| 其它 | ❌ 未覆盖；launcher 回退到 `PATH` 上的 `rust-anything`，没有则带指引退出 |
 
 二进制**不进仓库**：仓库只放源码，发布时由脚本装配进 tarball。所以 clone 下来后要跑一次
 `npm run vendor` 才有二进制可用。
@@ -91,7 +93,7 @@ CI 在 `ubuntu-latest`、`ubuntu-24.04-arm`、`windows-latest` 三个 runner 上
 
 ## 已知限制
 
-- **未覆盖 macOS**。需要时把对应二进制加进 `rustAnything.platforms` 并补 runner。
+- **darwin-x64 没有执行证据**：GitHub 的免费 Intel macOS runner 已退役（`macos-13` 2025-12 退役、`macos-14` 2026-11-02 退役），只剩付费 larger runner，因此这一平台只做静态检查。
 - **`record`、`diff`、`gate`、`app record`、`app replay` 会真的执行原程序**。在项目副本上跑，
   用测试数据库，环境里不要放生产凭据。
 - **`enable` 会改你的源文件**（加一个带标记的块，`disable` 逐字节还原）。启用前先问过用户。

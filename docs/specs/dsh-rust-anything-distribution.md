@@ -4,7 +4,7 @@
 
 - 文档标识：dsh-rust-anything-distribution
 - 规格状态：已确认
-- 最后更新：2026-11-24
+- 最后更新：2026-11-25
 - 实现状态：已实现
 - 验证状态：通过（AC-008~AC-012 全部通过）
 - 关联文档：[dsh-rust-anything.md](dsh-rust-anything.md)（主规格，D-001~D-010、R-001~R-007、AC-001~AC-007）。本文档只覆盖分发与发布，不取代主规格；两者冲突时以本文档对"二进制从哪来"的改写为准。编号在本文档内继续递增，避免与主规格冲突。
@@ -15,7 +15,7 @@
 
 主规格按 D-005/D-006 把二进制 vendor 进仓库，且只覆盖 linux-x64。实际需求已变化：
 
-- 需要覆盖 **linux-x64、linux-arm64、win32-x64** 三个平台。
+- 需要覆盖 **linux-x64、linux-arm64、win32-x64、darwin-arm64、darwin-x64** 五个平台。
 - 二进制**不进 git 仓库**，改为在 npm 发布时装配进 tarball，由 CI 在发布流程中内置。
 - 仓库已公开（`lolkda/dsh-rust-anything`），首提交 `eb9e567` 里仍带着 29 MB 的 linux-x64 二进制。
 - 本机无法执行 arm64 与 Windows 二进制（无 qemu、无 wine、无 binfmt），因此这两个平台的"可用"只能由 CI 证明。
@@ -30,7 +30,7 @@
 
 ### 非目标
 
-- **不覆盖 macOS**（darwin-arm64 / darwin-x64），由 D-017 明确排除。macOS 用户走 launcher 的 PATH 回退。
+- **darwin-x64 不做 CI 执行验证**（D-018）：GitHub 已无免费 Intel macOS runner，付费 larger runner 不纳入。该平台随包提供并只做静态检查。
 - 不改 22 个工具的定义、skill 内容或 UI 范围（沿用主规格 D-003、D-004、D-007）。
 - 不引入运行时 npm 依赖：发布物不声明 dependencies。
 - 不做 GitHub Release 的二进制分发；上游 release 与本仓库 release 都只用于版本对应，不作为下载源。
@@ -56,8 +56,8 @@
 ### R-009：发布物自包含三平台
 
 - 参与者或触发方：`scripts/build-npm.mjs` 装配、`npm publish`。
-- 前置条件与输入：本地或 CI 已运行 `scripts/vendor-binaries.mjs`，`vendor/` 下有 `linux-x64`、`linux-arm64`、`win32-x64` 三个目录。
-- 必须满足的行为：装配出的 `npm-out/` 里三个平台的二进制齐全、大小与上游包一致、Linux 两个保留可执行位；`package.json` 的 `files` 含 `vendor`。
+- 前置条件与输入：本地或 CI 已运行 `scripts/vendor-binaries.mjs`，`vendor/` 下有 `linux-x64`、`linux-arm64`、`win32-x64`、`darwin-arm64`、`darwin-x64` 五个目录。
+- 必须满足的行为：装配出的 `npm-out/` 里五个平台的二进制齐全、大小与上游包一致、Linux 与 macOS 的可执行位保留；`package.json` 的 `files` 含 `vendor`。
 - 输出或状态变化：`npm pack` 产出的 tarball 里 `package/vendor/**` 三个平台各一个文件。
 - 边界与失败行为：任一平台缺失时脚本以非零码退出并指出缺哪个，不发布残缺包。
 
@@ -158,12 +158,22 @@
 
 ### D-017：macOS 不纳入本次范围
 
-- 状态：已确认
+- 状态：已取代（由 D-018 取代）
 - 结论：不把 `darwin-arm64`、`darwin-x64` 加入 `rustAnything.platforms`；macOS 用户得到的是 launcher 的 PATH 回退与明确报错。
 - 理由：用户在分发方案收敛后明确表示不补 macOS（"不上 macos"），工具面与已交付的三个平台不受影响。
 - 考虑过的备选：补两个 darwin 平台（发布物 unpacked 由 85.3 MB 涨到约 137 MB、packed 约 29 MB，CI 需加 `macos-latest` 与 `macos-13` 两个 runner）。
 - 未采用原因：用户明确排除。
 - 影响范围：R-009 的平台清单、AC-009、README 的平台表、第 2 节非目标。
+- 后续：用户在看到平台缺口后改变决定，要求补上 macOS；本决定由 D-018 取代，原编号保留。
+
+### D-018：补上 macOS 五个平台，darwin-x64 只做静态检查
+
+- 状态：已确认
+- 结论：`rustAnything.platforms` 增至五个（加 `darwin-arm64`、`darwin-x64`）；`ci.yml` 增加 `macos-latest`（Apple Silicon，免费标准 runner）；`darwin-x64` 随包提供但不在 CI 执行。
+- 理由：用户要求补 macOS；Apple Silicon 是当前 Mac 主流且有免费 runner，Intel 的免费 runner 已于 2025-12（`macos-13`）与 2026-11-02（`macos-14`）退役，只剩付费 larger runner（`macos-26-intel`、`macos-15-intel`）。
+- 考虑过的备选：用付费 larger runner 跑 darwin-x64；不发 darwin-x64。
+- 未采用原因：付费 runner 长期成本与收益不匹配；不发则惩罚仍在使用 Intel Mac 的用户。用户明确表示"平台对了就能用，不用验"。
+- 影响范围：R-009、AC-009、AC-010、Q-009、README 平台表、DETAIL。
 
 ## 6. 验收标准
 
@@ -181,7 +191,7 @@
 - 对应规则：R-009
 - 前置条件：`vendor/` 下已有三个平台。
 - 操作或输入：`node scripts/build-npm.mjs`，再 `npm pack npm-out --dry-run`（或 `tar tzf` 检查 tarball）。
-- 预期结果：tarball 内含 `package/vendor/linux-x64/rust-anything`、`package/vendor/linux-arm64/rust-anything`、`package/vendor/win32-x64/rust-anything.exe`，大小与上游包一致，Linux 两项权限 755。
+- 预期结果：tarball 内含五个平台的二进制（`linux-x64`、`linux-arm64`、`win32-x64`、`darwin-arm64`、`darwin-x64`），大小与上游包一致，Linux 与 macOS 的可执行位为 755。
 - 验证状态：通过
 - 验证证据：`npm run build:npm` 输出 16 个文件、17.4 MB packed；`tar tvzf` 显示三个平台文件大小分别为 29373248、28249624、27602432 字节，与上游 npm 包逐一相同，Linux 两项权限 `-rwxr-xr-x`，其余文件归一化为 `-rw-r--r--`。`build-npm` 自身用 `npm pack --dry-run --json` 校验清单，缺文件即非零退出。
 
@@ -190,7 +200,7 @@
 - 对应规则：R-011、D-014
 - 前置条件：代码推送到 GitHub，Actions 可用。
 - 操作或输入：查看 `ci.yml` 三个 job 的运行结果。
-- 预期结果：ubuntu-latest、ubuntu-24.04-arm、windows-latest 三个 job 均成功，各自输出工具数 22。
+- 预期结果：ubuntu-latest、ubuntu-24.04-arm、windows-latest、macos-latest 四个 job 均成功，各自输出工具数 22；darwin-x64 无 job（D-018）。
 - 验证状态：通过
 - 验证证据：GitHub Actions run `45424355413`（commit `eb47fad`）三个 job 全部 success，日志分别为 `smoke: linux-x64 ok — rust-anything 4.0.0, 22 tools`、`smoke: linux-arm64 ok — rust-anything 4.0.0, 22 tools`、`smoke: win32-x64 ok — rust-anything 4.0.0, 22 tools`。arm64 与 Windows 的可用性由此证实，不再是假设。
 
@@ -212,6 +222,15 @@
 - 验证状态：通过
 - 验证证据：用户在交互式终端完成 `npm login --registry=https://registry.npmjs.org` 与 2FA 浏览器认证后，`npm publish --access public` 返回 `+ @lolkda/dsh-rust-anything@0.1.0`；约 4 分钟后 registry 可查（期间短暂出现 `0.0.0-stage` 占位，属 npm 后处理队列）。`npm view` 返回 `latest: 0.1.0`；`npm pack @lolkda/dsh-rust-anything@0.1.0` 拉下的 tarball 中三个平台二进制大小与上游逐字节一致（29373248 / 28249624 / 27602432），Linux 两项权限 `-rwxr-xr-x`。
 
+### AC-013：0.1.1 经 OIDC 发布
+
+- 对应规则：R-012、D-013
+- 前置条件：npm 上已为该包配置 Trusted Publisher（仓库 + `release.yml`）；代码含五个平台。
+- 操作或输入：`git tag v0.1.1 && git push origin v0.1.1`，观察 `release.yml`。
+- 预期结果：workflow 在装配与冒烟后由 OIDC 完成发布；`npm view @lolkda/dsh-rust-anything@0.1.1` 可查，tarball 含五个平台。
+- 验证状态：未执行
+- 验证证据：尚未执行
+
 ## 7. 未决问题与假设
 
 ### Q-006：Trusted Publisher 配置
@@ -230,6 +249,14 @@
 - 是否阻塞：否。
 - 决定或验证方式：CI 三平台冒烟。
 - 结论：假设成立。run `45424355413` 中 `linux-arm64` 与 `win32-x64` 两个 job 均在原生 runner 上完成 MCP 握手并列出 22 个工具。
+
+### Q-009：darwin-x64 没有执行证据
+
+- 类型：暂用假设
+- 内容：假设上游 4.0.0 的 darwin-x64 二进制在 Intel Mac 上可正常启动并完成 MCP 握手。
+- 影响范围：AC-010、对外"支持 darwin-x64"的表述。
+- 是否阻塞：否。
+- 决定或验证方式：按 D-018 不做 CI；README 与 DETAIL 已标注该平台只有静态检查。若日后需要证据，可临时启用付费 larger runner（`macos-26-intel`）手动跑一次 `test/smoke.mjs`。
 
 ### Q-008：首版发布时机
 
