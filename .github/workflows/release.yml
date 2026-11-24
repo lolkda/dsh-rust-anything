@@ -48,4 +48,10 @@ jobs:
         run: node test/smoke.mjs
 
       - name: Publish
-        run: npm publish npm-out --access public
+        run: |
+          version="$(node -p "require('./npm-out/package.json').version")"
+          if npm view "@lolkda/dsh-rust-anything@${version}" version >/dev/null 2>&1; then
+            echo "already published: ${version}"
+            exit 0
+          fi
+          npm publish npm-out --access public

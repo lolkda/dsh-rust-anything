@@ -5,8 +5,8 @@
 - 文档标识：dsh-rust-anything-distribution
 - 规格状态：已确认
 - 最后更新：2026-11-24
-- 实现状态：未开始
-- 验证状态：未执行
+- 实现状态：已实现
+- 验证状态：受阻（AC-012 等待用户执行 `npm login`；其余验收项全部通过）
 - 关联文档：[dsh-rust-anything.md](dsh-rust-anything.md)（主规格，D-001~D-010、R-001~R-007、AC-001~AC-007）。本文档只覆盖分发与发布，不取代主规格；两者冲突时以本文档对"二进制从哪来"的改写为准。编号在本文档内继续递增，避免与主规格冲突。
 
 ## 2. 目标与范围
@@ -164,8 +164,8 @@
 - 前置条件：重写并 force push 完成。
 - 操作或输入：`git ls-files vendor`；`git rev-list --objects --all | grep vendor`；`du -sh .git`。
 - 预期结果：第一条为空；第二条无输出；`.git` 小于 2 MB。
-- 验证状态：未执行
-- 验证证据：尚未执行
+- 验证状态：通过
+- 验证证据：`git ls-files vendor` 为 0 行；`git rev-list --objects origin/main | grep -E "vendor/(linux|win32|darwin)"` 为 0；`git ls-tree -r origin/main --name-only | grep "^vendor/"` 为 0；`.git` 由 7.1 MB 降到 232 KB（packfile 48.66 KiB）。重写后远端 HEAD 为 `eb47fad`（force push 前为 `eb9e567`）。
 
 ### AC-009：装配产物完整
 
@@ -173,8 +173,8 @@
 - 前置条件：`vendor/` 下已有三个平台。
 - 操作或输入：`node scripts/build-npm.mjs`，再 `npm pack npm-out --dry-run`（或 `tar tzf` 检查 tarball）。
 - 预期结果：tarball 内含 `package/vendor/linux-x64/rust-anything`、`package/vendor/linux-arm64/rust-anything`、`package/vendor/win32-x64/rust-anything.exe`，大小与上游包一致，Linux 两项权限 755。
-- 验证状态：未执行
-- 验证证据：尚未执行
+- 验证状态：通过
+- 验证证据：`npm run build:npm` 输出 16 个文件、17.4 MB packed；`tar tvzf` 显示三个平台文件大小分别为 29373248、28249624、27602432 字节，与上游 npm 包逐一相同，Linux 两项权限 `-rwxr-xr-x`，其余文件归一化为 `-rw-r--r--`。`build-npm` 自身用 `npm pack --dry-run --json` 校验清单，缺文件即非零退出。
 
 ### AC-010：三平台冒烟通过
 
@@ -182,8 +182,8 @@
 - 前置条件：代码推送到 GitHub，Actions 可用。
 - 操作或输入：查看 `ci.yml` 三个 job 的运行结果。
 - 预期结果：ubuntu-latest、ubuntu-24.04-arm、windows-latest 三个 job 均成功，各自输出工具数 22。
-- 验证状态：未执行
-- 验证证据：尚未执行
+- 验证状态：通过
+- 验证证据：GitHub Actions run `45424355413`（commit `eb47fad`）三个 job 全部 success，日志分别为 `smoke: linux-x64 ok — rust-anything 4.0.0, 22 tools`、`smoke: linux-arm64 ok — rust-anything 4.0.0, 22 tools`、`smoke: win32-x64 ok — rust-anything 4.0.0, 22 tools`。arm64 与 Windows 的可用性由此证实，不再是假设。
 
 ### AC-011：本地安装复验
 
@@ -191,8 +191,8 @@
 - 前置条件：包名与 patch 已更新。
 - 操作或输入：移除旧 bundle，按新包名重装，然后 `mcp_list`、`mcp_search`、`mcp_call`（analyze）、加载 skill。
 - 预期结果：`mcp_list` 出现 `rust-anything`；22 工具可调用；skill 可加载；profile 中不再有 `@local/dsh-rust-anything`。
-- 验证状态：未执行
-- 验证证据：尚未执行
+- 验证状态：通过
+- 验证证据：`remove_bundle @local/dsh-rust-anything` 返回 `applied`；`install_bundle` 新目录返回 `applied`、`warnings: []`，依赖变为 `@lolkda/dsh-rust-anything link:/app/project/dsh-rust-anything`；`mcp_list` 出现 `rust-anything`；会话 skill 目录恢复 `rust-anything`；`mcp_call` 调用 analyze 返回 `language: python`、`start_here: ["fuzzy.py"]`；profile 中 `@local/dsh-rust-anything` 的残留软链已删除。
 
 ### AC-012：首版发布成功
 
@@ -200,8 +200,8 @@
 - 前置条件：用户完成 `npm login`。
 - 操作或输入：`npm publish npm-out`，随后 `npm view @lolkda/dsh-rust-anything version`。
 - 预期结果：返回 `0.1.0`；从 registry 拉下的 tarball 内容与 AC-009 一致。
-- 验证状态：未执行
-- 验证证据：尚未执行
+- 验证状态：受阻
+- 验证证据：尚未执行——本机 `npm whoami` 返回 `need auth`，发布前需要用户本人在终端执行 `npm login`（凭据不能由模型输入）。装配产物已就绪：`npm-out/` 与 `npm-out/lolkda-dsh-rust-anything-0.1.0.tgz`。
 
 ## 7. 未决问题与假设
 
@@ -215,11 +215,12 @@
 
 ### Q-007：arm64 与 Windows 的实际可用性
 
-- 类型：暂用假设
+- 类型：已解决（原暂用假设）
 - 内容：假设上游 4.0.0 的 arm64 与 win32 二进制行为与 linux-x64 一致。
 - 影响范围：AC-010、对外"支持"表述。
-- 是否阻塞：否，由 CI 证伪或证实。
-- 决定或验证方式：CI 三平台冒烟；若某平台失败，在该平台记为未通过并如实报告，不用其他平台的结果代替。
+- 是否阻塞：否。
+- 决定或验证方式：CI 三平台冒烟。
+- 结论：假设成立。run `45424355413` 中 `linux-arm64` 与 `win32-x64` 两个 job 均在原生 runner 上完成 MCP 握手并列出 22 个工具。
 
 ### Q-008：首版发布时机
 
