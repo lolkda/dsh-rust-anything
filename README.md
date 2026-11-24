@@ -30,19 +30,24 @@ Rust，每一步都用原程序录制下来的行为校验。
 
 ## 安装
 
-```sh
-npm install -g @lolkda/dsh-rust-anything
+在 DSH 的 **Plugins** 页添加包名（可钉版本）：
+
+```text
+@lolkda/dsh-rust-anything
+@lolkda/dsh-rust-anything@0.1.1
 ```
 
-或者从仓库安装（开发用）：
+插件管理器会从 registry 装上包，二进制随包一起下来，不需要全局安装。
+
+从仓库安装（开发用，改动即时生效）：
 
 ```sh
 git clone https://github.com/lolkda/dsh-rust-anything
 cd dsh-rust-anything
-npm run vendor        # 取回三个平台的二进制到 vendor/
+npm run vendor        # 取回五个平台的二进制到 vendor/（不进 git）
 ```
 
-然后在 DSH 的 **Plugins** 页添加该包目录。安装后：
+然后在 **Plugins** 页添加该目录。安装后：
 
 - `mcp_list` 里出现 `rust-anything`；
 - 会话技能目录里出现 `rust-anything`。
@@ -75,7 +80,7 @@ report   { crate: "..." }                             → report/REPORT.md 与 c
 ## 开发
 
 ```sh
-npm run vendor        # 取回三个平台的二进制（约 80 MB）到 vendor/，vendor/ 不进 git
+npm run vendor        # 取回五个平台的二进制（约 134 MB）到 vendor/，vendor/ 不进 git
 npm test              # 拉起 launcher 做 MCP 握手，断言 22 个工具
 npm run build:npm     # 装配 npm-out/ 并用 npm pack --dry-run 校验产物清单
 npm run build:npm -- --publish   # 装配后发布（需要先 npm login --registry=https://registry.npmjs.org）

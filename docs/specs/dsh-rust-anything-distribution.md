@@ -98,7 +98,7 @@
 - npm Trusted Publishing 要求包已存在于 registry；首版必须走传统方式。
 - 公开仓库的 Actions 免费；`ubuntu-24.04-arm` 为原生 arm64 runner，非模拟。
 - 本机 npm 未登录（`need auth`），`npm login` 只能由用户本人完成。
-- DSH 0.2.2-rc.5；profile `web` 通过 `link:` 安装本地目录。
+- DSH 0.2.2-rc.5；profile `web` 原以 `link:` 安装本地目录，现改为从 registry 安装 `@lolkda/dsh-rust-anything@0.1.1`（AC-014）。
 
 ## 5. 关键决定
 
@@ -230,6 +230,15 @@
 - 预期结果：workflow 在装配与冒烟后由 OIDC 完成发布；`npm view @lolkda/dsh-rust-anything@0.1.1` 可查，tarball 含五个平台。
 - 验证状态：通过
 - 验证证据：首轮 run `45440982328` 在装配步骤失败（`npm pack --dry-run --json` 在 npm 11.22 上返回空数组）；修复后 run `45441792612` 装配与冒烟通过，publish 因 Trusted Publisher 未配置返回 `E404 PUT`；用户在 npm 配置后重跑同一 run，`Publish` 成功，日志含 `Signed provenance statement` 与 `Provenance statement published to transparency log`（logIndex 4083057860）。`npm view` 返回 `latest: 0.1.1`，`dist.attestations.provenance.predicateType` 为 SLSA v1，registry tarball 五个平台与上游逐字节一致。
+
+### AC-014：profile 由 link 安装改为 npm 安装
+
+- 对应规则：R-013
+- 前置条件：`@lolkda/dsh-rust-anything@0.1.1` 已在 registry 上；profile `web` 原本 link 到工作区目录。
+- 操作或输入：`remove_bundle @lolkda/dsh-rust-anything`，再 `install_bundle` 目标 `@lolkda/dsh-rust-anything@0.1.1`（registry 指定 `https://registry.npmjs.org`，避开镜像同步延迟）。
+- 预期结果：profile 依赖变为版本号而非 `link:`；安装目录是真实目录；MCP 与 skill 仍可用。
+- 验证状态：通过
+- 验证证据：依赖声明为 `@lolkda/dsh-rust-anything -> 0.1.1`；`node_modules/@lolkda/dsh-rust-anything` 为真实目录（`drwxr-xr-x`，非软链），内含五个平台二进制且大小与上游一致；运行中的进程路径为 `node_modules/@lolkda/dsh-rust-anything/bin/launcher.mjs` 与 `.../vendor/linux-x64/rust-anything`；`mcp_list` 出现 `rust-anything`，skill 回到会话目录，`mcp_call` 调用 analyze 返回 `start_here: ["fuzzy.py"]`。
 
 ## 7. 未决问题与假设
 
