@@ -30,7 +30,7 @@
 
 ### 非目标
 
-- **不覆盖 macOS**（darwin-arm64 / darwin-x64）。macOS 用户走 launcher 的 PATH 回退。
+- **不覆盖 macOS**（darwin-arm64 / darwin-x64），由 D-017 明确排除。macOS 用户走 launcher 的 PATH 回退。
 - 不改 22 个工具的定义、skill 内容或 UI 范围（沿用主规格 D-003、D-004、D-007）。
 - 不引入运行时 npm 依赖：发布物不声明 dependencies。
 - 不做 GitHub Release 的二进制分发；上游 release 与本仓库 release 都只用于版本对应，不作为下载源。
@@ -155,6 +155,15 @@
 - 考虑过的备选：更新主规格。
 - 未采用原因：用户选择独立草稿。
 - 影响范围：文档结构。
+
+### D-017：macOS 不纳入本次范围
+
+- 状态：已确认
+- 结论：不把 `darwin-arm64`、`darwin-x64` 加入 `rustAnything.platforms`；macOS 用户得到的是 launcher 的 PATH 回退与明确报错。
+- 理由：用户在分发方案收敛后明确表示不补 macOS（"不上 macos"），工具面与已交付的三个平台不受影响。
+- 考虑过的备选：补两个 darwin 平台（发布物 unpacked 由 85.3 MB 涨到约 137 MB、packed 约 29 MB，CI 需加 `macos-latest` 与 `macos-13` 两个 runner）。
+- 未采用原因：用户明确排除。
+- 影响范围：R-009 的平台清单、AC-009、README 的平台表、第 2 节非目标。
 
 ## 6. 验收标准
 
