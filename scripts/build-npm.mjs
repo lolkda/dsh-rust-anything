@@ -6,7 +6,7 @@
 // With --publish it then runs `npm publish npm-out`.
 import { execSync } from 'node:child_process'
 import { chmodSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join, sep } from 'node:path'
+import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
@@ -80,21 +80,64 @@ delete published.private
 published.files = [...FILES, 'vendor']
 writeFileSync(join(out, 'package.json'), `${JSON.stringify(published, null, 2)}\n`)
 
-// Verify what npm would actually pack, not what we think we copied.
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-const packed = JSON.parse(execSync(`${npm} pack --dry-run --json`, { cwd: out, encoding: 'utf8' }))[0]
-const paths = packed.files.map((f) => f.path)
-const expected = [
-  ...FILES.filter((f) => !f.startsWith('bin') && !f.startsWith('locale') && !f.startsWith('skills')),
+// Verify the staged tree, then cross-check the count against npm's own report. A quirk in
+// npm's report must not block a release, so only a real file-count mismatch fails the build.
+const walk = (dir, base = dir) =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name)
+    return entry.isDirectory() ? walk(path, base) : [relative(base, path).split(sep).join('/')]
+  })
+const staged = walk(out).sort()
+const required = [
+  'index.js',
+  'cordis.patch.yml',
+  'package.json',
+  'README.md',
+  'LICENSE',
+  'THIRD_PARTY_NOTICES.md',
+  'docs/DETAIL.md',
+  'icon.svg',
+  'bin/launcher.mjs',
+  'locale/en.json',
+  'locale/zh.json',
+  'skills/rust-anything/SKILL.md',
+  'skills/rust-anything/whole-app.md',
   ...platforms.map((key) => `vendor/${key}/${exeFor(key)}`),
 ]
-const absent = expected.filter((p) => !paths.includes(p))
+const absent = required.filter((file) => !staged.includes(file))
 if (absent.length > 0) {
-  console.error(`build-npm: packed tarball is missing ${absent.join(', ')}`)
+  console.error(`build-npm: staged tree is missing ${absent.join(', ')}`)
   process.exit(1)
 }
 
-console.log(`build-npm: ${published.name}@${published.version} — ${paths.length} files, ${(packed.size / 1048576).toFixed(1)} MB packed`)
+const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+let packedCount = null
+let packedSize = null
+try {
+  const parsed = JSON.parse(execSync(`${npm} pack --dry-run --json`, { cwd: out, encoding: 'utf8' }))
+  if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0].files)) {
+    packedCount = parsed[0].files.length
+    packedSize = `${(parsed[0].size / 1048576).toFixed(1)} MB`
+  }
+} catch {
+  // Fall through to the human-readable report.
+}
+if (packedCount === null) {
+  const text = execSync(`${npm} pack --dry-run`, { cwd: out, encoding: 'utf8' })
+  const count = /total files:\s*(\d+)/.exec(text)
+  const size = /package size:\s*([\d.]+\s*[kMG]B)/.exec(text)
+  packedCount = count ? Number(count[1]) : null
+  packedSize = size ? size[1] : 'unknown'
+}
+if (packedCount !== null && packedCount !== staged.length) {
+  console.error(`build-npm: npm would pack ${packedCount} files, but ${staged.length} are staged`)
+  process.exit(1)
+}
+
+console.log(
+  `build-npm: ${manifest.name}@${manifest.version} — ${staged.length} files, ${packedSize ?? 'unknown'} packed` +
+    (packedCount === null ? ' (npm report unavailable)' : ''),
+)
 for (const key of platforms) console.log(`  vendor/${key}/${exeFor(key)}`)
 
 if (process.argv.includes('--publish')) {
